@@ -19,6 +19,9 @@ import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
+# Cache timezone to avoid blocking I/O in event loop
+_EASTERN_TZ = pytz.timezone("US/Eastern")
+
 
 class IntegrationBlueprintApiClientError(Exception):
     """Exception to indicate a general API error."""
@@ -68,6 +71,11 @@ class IntegrationBlueprintApiClient:
         self._session = session
         self._api_base = api_base
         self._cookies: dict[str, str] = {}
+        # Ensure session has proper User-Agent header
+        if "User-Agent" not in self._session.headers:
+            self._session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
+            })
 
     async def async_login(self) -> dict:
         """
@@ -248,8 +256,7 @@ class IntegrationBlueprintApiClient:
             elif "upcoming-event" in element.attrs.get("class", []):
                 # 1768262399
                 start_ts = int(str(notnone(element.get("data-start"))))
-                eastern_tz = pytz.timezone("US/Eastern")
-                dt_with_tz = datetime.datetime.fromtimestamp(start_ts, tz=eastern_tz)
+                dt_with_tz = datetime.datetime.fromtimestamp(start_ts, tz=_EASTERN_TZ)
                 title = element.find(class_="event-title")
                 group_elem = element.select_one(".realm-title-group") or element.select_one(".realm-title-course-title .realm-main-titles")
                 group = group_elem.get_text(strip=True) if group_elem else None
@@ -281,10 +288,24 @@ class IntegrationBlueprintApiClient:
         for element in upcoming_list.find_all(recursive=False):
             if "upcoming-event" in element.attrs.get("class", []):
                 title = next(iter(notnone(element.find(class_="event-title")).children), None)
-                group = notnone(element.select_one(".realm-title-course-title .realm-main-titles")).get_text(strip=True) if element.select_one(".realm-title-course-title .realm-main-titles") else None
-                due = notnone(element.find_all(class_="readonly-title event-subtitle")[0]).get_text(strip=True) if element.find(class_="due-date") else None
-                if notnone(due).startswith("Due "):
+                group = (
+                    notnone(
+                        element.select_one(".realm-title-course-title .realm-main-titles")
+                    ).get_text(strip=True)
+                    if element.select_one(".realm-title-course-title .realm-main-titles")
+                    else None
+                )
+                due = (
+                    notnone(
+                        element.find_all(class_="readonly-title event-subtitle")[0]
+                    ).get_text(strip=True)
+                    if element.find(class_="due-date")
+                    else None
+                )
+
+                if due and notnone(due).startswith("Due "):
                     due = notnone(due)[4:]
+
                 if title:
                     assignments.append({
                         "title": title.get_text(strip=True),
@@ -313,10 +334,24 @@ class IntegrationBlueprintApiClient:
         for element in upcoming_list.find_all(recursive=False):
             if "upcoming-event" in element.attrs.get("class", []):
                 title = next(iter(notnone(element.find(class_="event-title")).children), None)
-                group = notnone(element.select_one(".realm-title-course-title .realm-main-titles")).get_text(strip=True) if element.select_one(".realm-title-course-title .realm-main-titles") else None
-                due = notnone(element.find_all(class_="readonly-title event-subtitle")[0]).get_text(strip=True) if element.find(class_="due-date") else None
-                if notnone(due).startswith("Due "):
+                group = (
+                    notnone(
+                        element.select_one(".realm-title-course-title .realm-main-titles")
+                    ).get_text(strip=True)
+                    if element.select_one(".realm-title-course-title .realm-main-titles")
+                    else None
+                )
+                due = (
+                    notnone(
+                        element.find_all(class_="readonly-title event-subtitle")[0]
+                    ).get_text(strip=True)
+                    if element.find(class_="due-date")
+                    else None
+                )
+
+                if due and notnone(due).startswith("Due "):
                     due = notnone(due)[4:]
+
                 if title:
                     assignments.append({
                         "title": title.get_text(strip=True),
