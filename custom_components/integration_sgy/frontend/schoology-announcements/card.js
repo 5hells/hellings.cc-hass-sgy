@@ -40,12 +40,13 @@ class SchoologyAnnouncementsCard extends HTMLElement {
       const likes = typeof i.likes === 'number' ? `<span> • ${i.likes} likes</span>` : '';
       const created = i.created ? ` <div class="meta">${i.created}</div>` : '';
       const comments = Array.isArray(i.comments) && i.comments.length
-        ? `<div class="comments">${i.comments.map(c => `<div class="comment"><strong>${c.author}</strong>: ${c.content}${typeof c.likes === 'number' ? ` (${c.likes})` : ''}</div>`).join('')}</div>`
+        ? `<div class="comments">${i.comments.map(c => `<div class="comment"><strong>${c.author}</strong>: ${c.content}${typeof c.likes === 'number' ? ` • ${c.likes} likes` : ''}</div>`).join('')}</div>`
         : '';
       return `
         <div class="item">
           <div class="header">${pfp}<div class="title">${i.title || ''}</div></div>
-          <div class="meta">${i.date || ''} ${group}${likes}</div>
+          <div>${i.content || ''}</div>
+          <div class="meta">${group}${likes}</div>
           ${created}
           ${comments}
         </div>

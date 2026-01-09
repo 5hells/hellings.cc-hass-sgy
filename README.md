@@ -14,12 +14,12 @@ A Home Assistant integration for Schoology (LMS) that provides sensors to monito
 lovelace:
   mode: yaml
   resources:
-    - url: /frontend/integration_sgy/cards/schoology-announcements/card.js
+    - url: /frontend/integration_sgy/schoology-announcements/card.js
       type: module
-    - url: /frontend/integration_sgy/cards/schoology-assignments/card.js
+    - url: /frontend/integration_sgy/schoology-assignments/card.js
       type: module
-    - url: /frontend/integration_sgy/cards/schoology-overdue/card.js
+    - url: /frontend/integration_sgy/schoology-overdue/card.js
       type: module
-    - url: /frontend/integration_sgy/cards/schoology-upcoming/card.js
+    - url: /frontend/integration_sgy/schoology-upcoming/card.js
       type: module
 ```

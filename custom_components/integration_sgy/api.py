@@ -200,6 +200,7 @@ class IntegrationBlueprintApiClient:
             title_elem = announcement.select_one(".long-username a")
             created = announcement.select_one(".created .small.gray")
             group_to = announcement.select_one("a[href^='/group/']")
+            content = announcement.select_one(".update-body.s-rte")
             date_elem = created
             likes = int(notnone(announcement.select_one(".s-like-sentence a")).get_text(strip=True).split()[0]) if announcement.select_one(".s-like-sentence a") else 0
             comments = []
@@ -225,6 +226,7 @@ class IntegrationBlueprintApiClient:
                         "profile_picture": pfp["src"] if pfp else None,
                         "group": group_to.get_text(strip=True) if group_to else None,
                         "created": created.get_text(strip=True) if created else None,
+                        "content": content.get_text(strip=True) if content else None,
                         "likes": likes,
                         "comments": comments,
                     }
