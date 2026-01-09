@@ -22,3 +22,4 @@ lovelace:
       type: module
     - url: /frontend/integration_sgy/cards/schoology-upcoming/card.js
       type: module
+```
