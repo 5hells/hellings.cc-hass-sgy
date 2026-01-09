@@ -19,6 +19,7 @@ from .api import IntegrationBlueprintApiClient
 from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
 from .coordinator import BlueprintDataUpdateCoordinator
 from .data import IntegrationBlueprintData
+from homeassistant.components.http import StaticPathConfig
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -43,11 +44,13 @@ async def async_setup_entry(
     entry: IntegrationBlueprintConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
-    # Register static path for frontend cards
-    hass.http.register_static_path(
-        f"/frontend/{DOMAIN}",
-        hass.config.path(f"custom_components/{DOMAIN}/frontend"),
-    )
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            f"/frontend/{DOMAIN}",
+            hass.config.path(f"custom_components/{DOMAIN}/frontend"),
+            cache_headers=False
+        ),
+    ])
 
     update_interval_minutes = entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
     coordinator = BlueprintDataUpdateCoordinator(
