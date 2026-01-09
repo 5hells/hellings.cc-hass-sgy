@@ -15,7 +15,7 @@ from .api import (
     IntegrationBlueprintApiClientCommunicationError,
     IntegrationBlueprintApiClientError,
 )
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_COOKIES, DEFAULT_API_BASE
 
 
 class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -31,9 +31,10 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         _errors = {}
         if user_input is not None:
             try:
-                await self._test_credentials(
+                cookies = await self._test_credentials(
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
+                    api_base=user_input[CONF_API_BASE],
                 )
             except IntegrationBlueprintApiClientAuthenticationError as exception:
                 LOGGER.warning(exception)
@@ -46,15 +47,17 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 _errors["base"] = "unknown"
             else:
                 await self.async_set_unique_id(
-                    ## Do NOT use this in production code
-                    ## The unique_id should never be something that can change
-                    ## https://developers.home-assistant.io/docs/config_entries_config_flow_handler#unique-ids
-                    unique_id=slugify(user_input[CONF_USERNAME])
+                    unique_id=slugify(
+                        f"{user_input[CONF_USERNAME]}-{user_input[CONF_API_BASE]}"
+                    )
                 )
                 self._abort_if_unique_id_configured()
+                entry_data = dict(user_input)
+                if cookies:
+                    entry_data[CONF_COOKIES] = cookies
                 return self.async_create_entry(
                     title=user_input[CONF_USERNAME],
-                    data=user_input,
+                    data=entry_data,
                 )
 
         return self.async_show_form(
@@ -74,16 +77,32 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             type=selector.TextSelectorType.PASSWORD,
                         ),
                     ),
+                    vol.Required(
+                        CONF_API_BASE,
+                        default=(user_input or {}).get(CONF_API_BASE, DEFAULT_API_BASE),
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.TEXT,
+                        ),
+                    ),
                 },
             ),
             errors=_errors,
         )
 
-    async def _test_credentials(self, username: str, password: str) -> None:
-        """Validate credentials."""
+    async def _test_credentials(
+        self,
+        username: str,
+        password: str,
+        api_base: str,
+    ) -> dict:
+        """Validate credentials and return any obtained cookies."""
         client = IntegrationBlueprintApiClient(
             username=username,
             password=password,
             session=async_create_clientsession(self.hass),
+            api_base=api_base,
         )
-        await client.async_get_data()
+        # async_login will raise on auth failure and store cookies on the client
+        cookies = await client.async_login()
+        return cookies

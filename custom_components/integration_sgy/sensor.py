@@ -1,4 +1,4 @@
-"""Sensor platform for integration_blueprint."""
+"""A Schoology API sensor for Home Assistant."""
 
 from __future__ import annotations
 
@@ -17,9 +17,24 @@ if TYPE_CHECKING:
 
 ENTITY_DESCRIPTIONS = (
     SensorEntityDescription(
-        key="integration_blueprint",
-        name="Integration Sensor",
-        icon="mdi:format-quote-close",
+        key="announcements",
+        name="Schoology Announcements",
+        icon="mdi:bullhorn",
+    ),
+    SensorEntityDescription(
+        key="upcoming_events",
+        name="Schoology Upcoming Events",
+        icon="mdi:calendar",
+    ),
+    SensorEntityDescription(
+        key="upcoming_assignments",
+        name="Schoology Upcoming Assignments",
+        icon="mdi:clipboard-text",
+    ),
+    SensorEntityDescription(
+        key="overdue_assignments",
+        name="Schoology Overdue Assignments",
+        icon="mdi:alert-circle-outline",
     ),
 )
 
@@ -50,8 +65,20 @@ class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
         """Initialize the sensor class."""
         super().__init__(coordinator)
         self.entity_description = entity_description
+        # Ensure unique id per sensor type
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}-{entity_description.key}"
 
     @property
-    def native_value(self) -> str | None:
-        """Return the native value of the sensor."""
-        return self.coordinator.data.get("body")
+    def native_value(self) -> int | None:
+        """Return the count of items for this sensor."""
+        items = self.coordinator.data.get(self.entity_description.key) or []
+        try:
+            return len(items)
+        except Exception:  # len() may fail if items is not a list
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict | None:
+        """Return extra attributes including the items list."""
+        items = self.coordinator.data.get(self.entity_description.key) or []
+        return {"items": items}

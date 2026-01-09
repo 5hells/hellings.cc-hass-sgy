@@ -15,7 +15,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
 
 from .api import IntegrationBlueprintApiClient
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_COOKIES
 from .coordinator import BlueprintDataUpdateCoordinator
 from .data import IntegrationBlueprintData
 
@@ -26,8 +26,6 @@ if TYPE_CHECKING:
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
-    Platform.BINARY_SENSOR,
-    Platform.SWITCH,
 ]
 
 
@@ -48,11 +46,12 @@ async def async_setup_entry(
             username=entry.data[CONF_USERNAME],
             password=entry.data[CONF_PASSWORD],
             session=async_get_clientsession(hass),
+            api_base=entry.data.get(CONF_API_BASE) or "x.schoology.com",
+            cookies=entry.data.get(CONF_COOKIES),
         ),
-        integration=async_get_loaded_integration(hass, entry.domain),
         coordinator=coordinator,
+        integration=async_get_loaded_integration(hass, DOMAIN),
     )
-
     # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
     await coordinator.async_config_entry_first_refresh()
 
