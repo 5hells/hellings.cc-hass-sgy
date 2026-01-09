@@ -1,0 +1,18 @@
+{
+  "domain": "integration_sgy",
+  "name": "Schoology for Home Assistant",
+  "codeowners": [
+    "@5hells"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/5hells/hellings.cc-hass-sgy/blob/main/README.md",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/5hells/hellings.cc-hass-sgy/issues",
+  "version": "0.1.0",
+  "requirements": [
+    "bs4",
+    "requests",
+    "pytz",
+    "python-slugify"
+  ]
+}
