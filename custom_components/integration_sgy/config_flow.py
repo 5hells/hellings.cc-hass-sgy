@@ -15,7 +15,7 @@ from .api import (
     IntegrationBlueprintApiClientCommunicationError,
     IntegrationBlueprintApiClientError,
 )
-from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_COOKIES, DEFAULT_API_BASE
+from .const import DOMAIN, LOGGER, CONF_API_BASE, DEFAULT_API_BASE
 
 
 class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -31,7 +31,7 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         _errors = {}
         if user_input is not None:
             try:
-                cookies = await self._test_credentials(
+                await self._test_credentials(
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
                     api_base=user_input[CONF_API_BASE],
@@ -52,12 +52,9 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                 )
                 self._abort_if_unique_id_configured()
-                entry_data = dict(user_input)
-                if cookies:
-                    entry_data[CONF_COOKIES] = cookies
                 return self.async_create_entry(
                     title=user_input[CONF_USERNAME],
-                    data=entry_data,
+                    data=user_input,
                 )
 
         return self.async_show_form(
@@ -95,14 +92,13 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         username: str,
         password: str,
         api_base: str,
-    ) -> dict:
-        """Validate credentials and return any obtained cookies."""
+    ) -> None:
+        """Validate credentials."""
         client = IntegrationBlueprintApiClient(
             username=username,
             password=password,
             session=async_create_clientsession(self.hass),
             api_base=api_base,
         )
-        # async_login will raise on auth failure and store cookies on the client
-        cookies = await client.async_login()
-        return cookies
+        # async_login will raise on auth failure
+        await client.async_login()

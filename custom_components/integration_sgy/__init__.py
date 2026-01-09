@@ -15,7 +15,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
 
 from .api import IntegrationBlueprintApiClient
-from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_COOKIES
+from .const import DOMAIN, LOGGER, CONF_API_BASE
 from .coordinator import BlueprintDataUpdateCoordinator
 from .data import IntegrationBlueprintData
 
@@ -67,7 +67,6 @@ async def async_setup_entry(
             password=entry.data[CONF_PASSWORD],
             session=async_get_clientsession(hass),
             api_base=entry.data.get(CONF_API_BASE) or "x.schoology.com",
-            cookies=entry.data.get(CONF_COOKIES),
         ),
         coordinator=coordinator,
         integration=async_get_loaded_integration(hass, DOMAIN),

@@ -57,7 +57,6 @@ class IntegrationBlueprintApiClient:
         password: str,
         session: aiohttp.ClientSession,
         api_base: str = "x.schoology.com",
-        cookies: dict | None = None,
     ) -> None:
         """Sample API Client."""
         self._username = username
@@ -65,8 +64,6 @@ class IntegrationBlueprintApiClient:
         self._session = session
         self._api_base = api_base
         self._cookies: dict[str, str] = {}
-        if cookies:
-            self.set_cookies(cookies)
 
     async def async_login(self) -> dict:
         """
