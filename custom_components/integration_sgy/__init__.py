@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from typing import TYPE_CHECKING
+import asyncio
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -18,8 +19,6 @@ from .api import IntegrationBlueprintApiClient
 from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
 from .coordinator import BlueprintDataUpdateCoordinator
 from .data import IntegrationBlueprintData
-
-from homeassistant.components.http import StaticPathConfig
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -45,14 +44,9 @@ async def async_setup_entry(
 ) -> bool:
     """Set up this integration using UI."""
     # Register static path for frontend cards
-    await hass.http.async_register_static_paths(
-        [
-            StaticPathConfig(
-                f"/frontend/{DOMAIN}",
-                hass.config.path(f"custom_components/{DOMAIN}/frontend"),
-                cache_headers=False
-            )
-        ]
+    hass.http.register_static_path(
+        f"/frontend/{DOMAIN}",
+        hass.config.path(f"custom_components/{DOMAIN}/frontend"),
     )
 
     update_interval_minutes = entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
@@ -79,28 +73,40 @@ async def async_setup_entry(
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # Automatically add frontend card resources to Lovelace
-    if "lovelace" in hass.data:
-        try:
-            lovelace_data = hass.data["lovelace"]
-            if hasattr(lovelace_data, "resources") and lovelace_data.resources:
-                resources = lovelace_data.resources
-                for card in FRONTEND_CARDS:
-                    url = f"/frontend/{DOMAIN}/{card}/card.js"
-                    try:
-                        existing = await resources.async_get_items()
-                        if not any(res.get("url") == url for res in existing):
-                            await resources.async_create_item({"res_type": "module", "url": url})
-                            LOGGER.info("Added Lovelace resource: %s", url)
-                        else:
-                            LOGGER.debug("Lovelace resource already exists: %s", url)
-                    except Exception as e:
-                        LOGGER.warning("Failed to add Lovelace resource %s: %s. You may need to add it manually.", url, e)
-            else:
-                LOGGER.info("Lovelace resources not available, skipping automatic addition. Add resources manually: %s", [f"/frontend/{DOMAIN}/{card}/card.js" for card in FRONTEND_CARDS])
-        except Exception as e:
-            LOGGER.warning("Failed to access Lovelace data: %s. Add resources manually: %s", e, [f"/frontend/{DOMAIN}/{card}/card.js" for card in FRONTEND_CARDS])
-    else:
-        LOGGER.info("Lovelace not available, skipping automatic addition. Add resources manually: %s", [f"/frontend/{DOMAIN}/{card}/card.js" for card in FRONTEND_CARDS])
+    async def _add_lovelace_resources():
+        """Add Lovelace resources with delay to ensure Lovelace is loaded."""
+        await asyncio.sleep(2)  # Wait for Lovelace to initialize
+        if "lovelace" in hass.data:
+            try:
+                lovelace_data = hass.data["lovelace"]
+                LOGGER.debug("Lovelace data type: %s", type(lovelace_data))
+                if hasattr(lovelace_data, "resources"):
+                    resources = lovelace_data.resources
+                    LOGGER.debug("Resources object: %s, type: %s", resources, type(resources))
+                    if resources and hasattr(resources, "async_create_item"):
+                        for card in FRONTEND_CARDS:
+                            url = f"/frontend/{DOMAIN}/{card}/card.js"
+                            try:
+                                existing = await resources.async_get_items()
+                                LOGGER.debug("Existing resources: %s", [r.get("url") for r in existing])
+                                if not any(res.get("url") == url for res in existing):
+                                    await resources.async_create_item({"res_type": "module", "url": url})
+                                    LOGGER.info("Added Lovelace resource: %s", url)
+                                else:
+                                    LOGGER.debug("Lovelace resource already exists: %s", url)
+                            except Exception as e:
+                                LOGGER.warning("Failed to add Lovelace resource %s: %s", url, e)
+                    else:
+                        LOGGER.warning("Resources object not available or missing async_create_item method")
+                else:
+                    LOGGER.warning("Lovelace data does not have resources attribute")
+            except Exception as e:
+                LOGGER.warning("Failed to access Lovelace data: %s", e)
+        else:
+            LOGGER.info("Lovelace not in hass.data after delay, skipping automatic resource addition")
+
+    # Try to add resources immediately and also schedule delayed addition
+    hass.async_create_task(_add_lovelace_resources())
 
     return True
 

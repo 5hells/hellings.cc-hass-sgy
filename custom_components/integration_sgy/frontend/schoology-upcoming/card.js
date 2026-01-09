@@ -70,4 +70,5 @@ window.customCards.push({
   description: "Display upcoming Schoology events",
   icon: "mdi:calendar",
   preview: true,
+  documentationURL: "https://github.com/5hells/hellings.cc-hass-sgy",
 });
