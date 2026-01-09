@@ -65,6 +65,39 @@ class SchoologyAnnouncementsCard extends HTMLElement {
   getCardSize() {
     return 3;
   }
+
+  getGridOptions() {
+    return {
+      rows: 4,
+      columns: 6,
+      min_rows: 2,
+      max_rows: 8,
+    };
+  }
+
+  static getStubConfig() {
+    return {
+      entity: "sensor.schoology_announcements"
+    };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "entity", required: true, selector: { entity: {} } },
+        { name: "title", selector: { text: {} } },
+      ],
+    };
+  }
 }
 
 customElements.define('schoology-announcements-card', SchoologyAnnouncementsCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "custom:schoology-announcements-card",
+  name: "Schoology Announcements",
+  description: "Display Schoology announcements with details",
+  icon: "mdi:bullhorn",
+  preview: true,
+});

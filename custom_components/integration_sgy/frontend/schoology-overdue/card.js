@@ -35,5 +35,39 @@ class SchoologyOverdueCard extends HTMLElement {
     `;
   }
   getCardSize() { return 2; }
+
+  getGridOptions() {
+    return {
+      rows: 3,
+      columns: 6,
+      min_rows: 2,
+      max_rows: 6,
+    };
+  }
+
+  static getStubConfig() {
+    return {
+      entity: "sensor.schoology_overdue_assignments"
+    };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "entity", required: true, selector: { entity: {} } },
+        { name: "title", selector: { text: {} } },
+      ],
+    };
+  }
 }
+
 customElements.define('schoology-overdue-card', SchoologyOverdueCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "custom:schoology-overdue-card",
+  name: "Schoology Overdue Assignments",
+  description: "Display overdue Schoology assignments",
+  icon: "mdi:alert-circle",
+  preview: true,
+});

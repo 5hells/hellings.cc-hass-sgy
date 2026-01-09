@@ -35,5 +35,39 @@ class SchoologyUpcomingEventsCard extends HTMLElement {
     `;
   }
   getCardSize() { return 2; }
+
+  getGridOptions() {
+    return {
+      rows: 3,
+      columns: 6,
+      min_rows: 2,
+      max_rows: 6,
+    };
+  }
+
+  static getStubConfig() {
+    return {
+      entity: "sensor.schoology_upcoming_events"
+    };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "entity", required: true, selector: { entity: {} } },
+        { name: "title", selector: { text: {} } },
+      ],
+    };
+  }
 }
+
 customElements.define('schoology-upcoming-card', SchoologyUpcomingEventsCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "custom:schoology-upcoming-card",
+  name: "Schoology Upcoming Events",
+  description: "Display upcoming Schoology events",
+  icon: "mdi:calendar",
+  preview: true,
+});

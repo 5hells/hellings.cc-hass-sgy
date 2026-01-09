@@ -35,5 +35,39 @@ class SchoologyAssignmentsCard extends HTMLElement {
     `;
   }
   getCardSize() { return 2; }
+
+  getGridOptions() {
+    return {
+      rows: 3,
+      columns: 6,
+      min_rows: 2,
+      max_rows: 6,
+    };
+  }
+
+  static getStubConfig() {
+    return {
+      entity: "sensor.schoology_upcoming_assignments"
+    };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "entity", required: true, selector: { entity: {} } },
+        { name: "title", selector: { text: {} } },
+      ],
+    };
+  }
 }
+
 customElements.define('schoology-assignments-card', SchoologyAssignmentsCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "custom:schoology-assignments-card",
+  name: "Schoology Upcoming Assignments",
+  description: "Display upcoming Schoology assignments",
+  icon: "mdi:clipboard-text",
+  preview: true,
+});

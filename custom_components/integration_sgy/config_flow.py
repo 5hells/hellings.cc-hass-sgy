@@ -15,7 +15,7 @@ from .api import (
     IntegrationBlueprintApiClientCommunicationError,
     IntegrationBlueprintApiClientError,
 )
-from .const import DOMAIN, LOGGER, CONF_API_BASE, DEFAULT_API_BASE
+from .const import DOMAIN, LOGGER, CONF_API_BASE, DEFAULT_API_BASE, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
 
 
 class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -80,6 +80,17 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): selector.TextSelector(
                         selector.TextSelectorConfig(
                             type=selector.TextSelectorType.TEXT,
+                        ),
+                    ),
+                    vol.Required(
+                        CONF_UPDATE_INTERVAL,
+                        default=(user_input or {}).get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=15,
+                            max=1440,
+                            step=15,
+                            unit_of_measurement="minutes",
                         ),
                     ),
                 },

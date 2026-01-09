@@ -15,7 +15,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
 
 from .api import IntegrationBlueprintApiClient
-from .const import DOMAIN, LOGGER, CONF_API_BASE
+from .const import DOMAIN, LOGGER, CONF_API_BASE, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
 from .coordinator import BlueprintDataUpdateCoordinator
 from .data import IntegrationBlueprintData
 
@@ -55,11 +55,12 @@ async def async_setup_entry(
         ]
     )
 
+    update_interval_minutes = entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
     coordinator = BlueprintDataUpdateCoordinator(
         hass=hass,
         logger=LOGGER,
         name=DOMAIN,
-        update_interval=timedelta(hours=1),
+        update_interval=timedelta(minutes=update_interval_minutes),
     )
     entry.runtime_data = IntegrationBlueprintData(
         client=IntegrationBlueprintApiClient(
@@ -78,17 +79,28 @@ async def async_setup_entry(
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # Automatically add frontend card resources to Lovelace
-    if "lovelace" in hass.data and hasattr(hass.data["lovelace"], "resources"):
-        resources = hass.data["lovelace"].resources
-        if resources and hasattr(resources, "async_create_item"):
-            for card in FRONTEND_CARDS:
-                url = f"/frontend/{DOMAIN}/{card}/card.js"
-                try:
-                    existing = await resources.async_get_items()
-                    if not any(res.get("url") == url for res in existing):
-                        await resources.async_create_item({"res_type": "module", "url": url})
-                except Exception as e:
-                    LOGGER.warning("Failed to add Lovelace resource %s: %s", url, e)
+    if "lovelace" in hass.data:
+        try:
+            lovelace_data = hass.data["lovelace"]
+            if hasattr(lovelace_data, "resources") and lovelace_data.resources:
+                resources = lovelace_data.resources
+                for card in FRONTEND_CARDS:
+                    url = f"/frontend/{DOMAIN}/{card}/card.js"
+                    try:
+                        existing = await resources.async_get_items()
+                        if not any(res.get("url") == url for res in existing):
+                            await resources.async_create_item({"res_type": "module", "url": url})
+                            LOGGER.info("Added Lovelace resource: %s", url)
+                        else:
+                            LOGGER.debug("Lovelace resource already exists: %s", url)
+                    except Exception as e:
+                        LOGGER.warning("Failed to add Lovelace resource %s: %s. You may need to add it manually.", url, e)
+            else:
+                LOGGER.info("Lovelace resources not available, skipping automatic addition. Add resources manually: %s", [f"/frontend/{DOMAIN}/{card}/card.js" for card in FRONTEND_CARDS])
+        except Exception as e:
+            LOGGER.warning("Failed to access Lovelace data: %s. Add resources manually: %s", e, [f"/frontend/{DOMAIN}/{card}/card.js" for card in FRONTEND_CARDS])
+    else:
+        LOGGER.info("Lovelace not available, skipping automatic addition. Add resources manually: %s", [f"/frontend/{DOMAIN}/{card}/card.js" for card in FRONTEND_CARDS])
 
     return True
 
