@@ -73,17 +73,16 @@ class IntegrationBlueprintApiClient:
         Authenticate with the API, follow redirects and store cookies.
         """
         try:
+            url = self._api_base
             async with async_timeout.timeout(10):
                 base_resp = await self._session.request(
                     method="get",
-                    url=f"https://{self._api_base}",
+                    url=f"https://{self._api_base}/",
                 )
                 _verify_response_or_raise(base_resp)
-                school = base_resp.url.query.get("school")
+                url = str(base_resp.headers.get("Location") or base_resp.url)
 
-            login_url = f"https://{self._api_base}/login"
-            if school:
-                login_url = f"{login_url}?school={school}"
+            login_url = url
 
             async with async_timeout.timeout(10):
                 response = await self._session.request(
@@ -110,9 +109,6 @@ class IntegrationBlueprintApiClient:
                 for input_tag in form.find_all("input")
                 if input_tag.get("name")
             }
-
-            if school and "school" not in post_data:
-                post_data["school"] = school
 
             async with async_timeout.timeout(10):
                 response = await self._session.request(
