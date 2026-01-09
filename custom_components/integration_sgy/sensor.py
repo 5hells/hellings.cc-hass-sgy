@@ -65,8 +65,8 @@ def overriding_this_is_totally_okay(property_fn):
 class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
     """integration_blueprint Sensor class."""
 
-    @overriding_this_is_totally_okay("available")
-    def avail(self) -> bool:
+    @property
+    def available(self) -> bool:
         """Return True if the entity is available."""
         return self.coordinator.last_update_success
 
@@ -81,8 +81,8 @@ class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
         # Ensure unique id per sensor type
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}-{entity_description.key}"
 
-    @overriding_this_is_totally_okay("native_value")
-    def native(self) -> int | None:
+    @property
+    def native_value(self) -> int | None:
         """Return the count of items for this sensor."""
         items = self.coordinator.data.get(self.entity_description.key) or []
         try:
@@ -90,8 +90,8 @@ class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
         except Exception:  # len() may fail if items is not a list
             return None
 
-    @overriding_this_is_totally_okay("extra_state_attributes")
-    def extra(self) -> dict | None:
+    @property
+    def extra_state_attributes(self) -> dict | None:
         """Return extra attributes including the items list."""
         items = self.coordinator.data.get(self.entity_description.key) or []
         return {"items": items}

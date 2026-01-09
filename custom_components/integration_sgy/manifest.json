@@ -12,6 +12,7 @@
   "requirements": [
     "bs4",
     "requests",
-    "pytz"
+    "pytz",
+    "python-slugify"
   ]
 }
