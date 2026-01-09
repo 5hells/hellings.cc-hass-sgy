@@ -30,7 +30,7 @@ class SchoologyOverdueCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <ha-card header="${title}">
         ${style}
-        <div class="container">${items.length ? list : '<div class="empty">No overdue assignments'}</div>
+        <div class="container">${items.length ? list : '<div class="empty">No overdue assignments</div>'}</div>
       </ha-card>
     `;
   }

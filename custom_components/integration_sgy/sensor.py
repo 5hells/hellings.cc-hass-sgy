@@ -53,9 +53,22 @@ async def async_setup_entry(
         for entity_description in ENTITY_DESCRIPTIONS
     )
 
+# @overriding_this_is_totally_okay("native_value")
+def overriding_this_is_totally_okay(property_fn):
+    classx = property_fn.__self__.__class__
+    wrapper = property(property_fn)
+    setattr(classx, property_fn.__name__, wrapper)
+    def wrapper_getter(self):
+        return property_fn(self)
+    return wrapper_getter
 
 class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
     """integration_blueprint Sensor class."""
+
+    @overriding_this_is_totally_okay("available")
+    def avail(self) -> bool:
+        """Return True if the entity is available."""
+        return self.coordinator.last_update_success
 
     def __init__(
         self,
@@ -68,8 +81,8 @@ class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
         # Ensure unique id per sensor type
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}-{entity_description.key}"
 
-    @property
-    def native_value(self) -> int | None:
+    @overriding_this_is_totally_okay("native_value")
+    def native(self) -> int | None:
         """Return the count of items for this sensor."""
         items = self.coordinator.data.get(self.entity_description.key) or []
         try:
@@ -77,8 +90,8 @@ class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
         except Exception:  # len() may fail if items is not a list
             return None
 
-    @property
-    def extra_state_attributes(self) -> dict | None:
+    @overriding_this_is_totally_okay("extra_state_attributes")
+    def extra(self) -> dict | None:
         """Return extra attributes including the items list."""
         items = self.coordinator.data.get(self.entity_description.key) or []
         return {"items": items}

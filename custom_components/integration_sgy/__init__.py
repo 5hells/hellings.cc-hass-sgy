@@ -1,8 +1,8 @@
 """
-Custom integration to integrate integration_blueprint with Home Assistant.
+Custom integration to integrate integration_sgy with Home Assistant.
 
 For more details about this integration, please refer to
-https://github.com/ludeeus/integration_blueprint
+https://github.com/5hells/hellings.cc-hass-sgy
 """
 
 from __future__ import annotations
@@ -30,21 +30,13 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
 ]
 
-async def async_setup(
-    hass: HomeAssistant,
-    config: dict
-) -> bool:
-    """Set up the static frontend path for the integration."""
-    await hass.http.async_register_static_paths(
-        [
-            StaticPathConfig(
-                "/frontend",
-                hass.config.path("custom_components/integration_sgy/frontend"),
-                cache_headers=False
-            )
-        ]
-    )
-    return True
+# List of frontend card directories
+FRONTEND_CARDS = [
+    "schoology-announcements",
+    "schoology-assignments",
+    "schoology-overdue",
+    "schoology-upcoming",
+]
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
 async def async_setup_entry(
@@ -52,6 +44,17 @@ async def async_setup_entry(
     entry: IntegrationBlueprintConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
+    # Register static path for frontend cards
+    await hass.http.async_register_static_paths(
+        [
+            StaticPathConfig(
+                f"/frontend/{DOMAIN}",
+                hass.config.path(f"custom_components/{DOMAIN}/frontend"),
+                cache_headers=False
+            )
+        ]
+    )
+
     coordinator = BlueprintDataUpdateCoordinator(
         hass=hass,
         logger=LOGGER,
@@ -75,18 +78,13 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
-    #frontend/
-    #  schoology-announcements/
-    #    card.js
-    #  schoology-assignments/
-    #    card.js
-    #  schoology-overdue/
-    #    card.js
-    if "frontend" in hass.data:
-        for path in hass.data["frontend"]["paths"]:
-            resources = hass.data["lovelace"]["resources"]
-            url = f"/frontend/{DOMAIN}/{path}/card.js"
-            if url not in [res["url"] for res in resources.async_items()]:
+    # Automatically add frontend card resources to Lovelace
+    if "lovelace" in hass.data and "resources" in hass.data["lovelace"]:
+        resources = hass.data["lovelace"]["resources"]
+        for card in FRONTEND_CARDS:
+            url = f"/frontend/{DOMAIN}/{card}/card.js"
+            existing = await resources.async_get_items()
+            if not any(res["url"] == url for res in existing):
                 await resources.async_create_item({"res_type": "module", "url": url})
 
     return True

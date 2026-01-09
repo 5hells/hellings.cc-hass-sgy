@@ -8,5 +8,10 @@
   "documentation": "https://github.com/5hells/hellings.cc-hass-sgy/blob/main/README.md",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/5hells/hellings.cc-hass-sgy/issues",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "requirements": [
+    "bs4",
+    "requests",
+    "pytz"
+  ]
 }
