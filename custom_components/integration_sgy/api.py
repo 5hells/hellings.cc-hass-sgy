@@ -73,59 +73,66 @@ class IntegrationBlueprintApiClient:
         Authenticate with the API, follow redirects and store cookies.
         """
         try:
-            url = self._api_base
-            async with async_timeout.timeout(10):
-                base_resp = await self._session.request(
-                    method="get",
-                    url=f"https://{self._api_base}/",
-                )
-                _verify_response_or_raise(base_resp)
-                url = str(base_resp.headers.get("Location") or base_resp.url)
+        async with async_timeout.timeout(10):
+            base_resp = await self._session.get(f"https://{self._api_base}/", allow_redirects=True)
+            base_resp.raise_for_status()
+            login_url = str(base_resp.url)
 
-            login_url = url
+        print(f"Login URL: {login_url}")  # noqa: T201
 
-            async with async_timeout.timeout(10):
-                response = await self._session.request(
-                    method="get",
-                    url=login_url,
-                )
-                _verify_response_or_raise(response)
-                login_page = await response.text()
+        async with async_timeout.timeout(10):
+            response = await self._session.get(login_url)
+            response.raise_for_status()
+            login_page = await response.text()
 
-            form = bs.BeautifulSoup(login_page, features="html.parser")
-            form = form.find(id="s-user-login-form")
-            if not form:
-                msg = "Login form not found"
-                raise IntegrationBlueprintApiClientError(msg)
+        form = bs.BeautifulSoup(login_page, features="html.parser")
+        form_elem = form.find(id="s-user-login-form")
+        if not form_elem:
+            msg = f"Login form not found. Page: {login_page[:500]}..."
+            raise IntegrationBlueprintApiClientError(msg)
 
-            for input_tag in form.find_all("input"):
-                if input_tag.get("name") == "mail":
-                    input_tag["value"] = self._username
-                if input_tag.get("name") == "pass":
-                    input_tag["value"] = self._password
+        form_action = form_elem.get("action") or login_url
+        if not form_action.startswith("http"):
+            if form_action.startswith("/"):
+                form_action = f"https://{self._api_base}{form_action}"
+            else:
+                form_action = f"{login_url}/{form_action}"
 
-            post_data = {
-                input_tag["name"]: input_tag.get("value", "")
-                for input_tag in form.find_all("input")
-                if input_tag.get("name")
-            }
+        post_data = {
+            "mail": self._username,
+            "pass": self._password,
+        }
+        for input_tag in form_elem.find_all("input"):
+            input_name = input_tag.get("name")
+            if input_name and input_name not in ["mail", "pass"]:
+                post_data[input_name] = input_tag.get("value", "")
 
-            async with async_timeout.timeout(10):
-                response = await self._session.request(
-                    method="post",
-                    url=login_url,
-                    data=post_data,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                )
-                _verify_response_or_raise(response)
-                body = await response.text()
+        async with async_timeout.timeout(10):
+            response = await self._session.post(
+                form_action,
+                data=post_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                allow_redirects=True,
+            )
+            response.raise_for_status()
+            body = await response.text()
 
-            if "Invalid username or password" in body:
+        print(f"After login, final URL: {response.url}")
+        print(f"Response status: {response.status}")
+        print(f"Cookies in jar: {len(list(self._session.cookie_jar))}")
+
+        if "Invalid username or password" in body or "login" in str(response.url).lower():
+            if "invalid" in body.lower():
                 msg = "Invalid credentials"
                 raise IntegrationBlueprintApiClientAuthenticationError(msg)
+            else:
+                msg = "Login failed - still on login page"
+                raise IntegrationBlueprintApiClientError(msg)
 
-            cookies = {name: morsel.value for name, morsel in response.cookies.items()}
-            if cookies:
+        cookies = {}
+        for cookie in self._session.cookie_jar:
+            cookies[cookie.key] = cookie.value
+
                 self.set_cookies(cookies)
 
             return cookies
@@ -151,11 +158,7 @@ class IntegrationBlueprintApiClient:
             },
         )
 
-        html = ""
-        if isinstance(r, dict):
-            html = r.get("output") or r.get("json", {}).get("html") or r.get("html") or r.get("body", "")
-        elif isinstance(r, str):
-            html = r
+        html = r.get("output", "")
 
         if not html:
             return []
@@ -167,7 +170,7 @@ class IntegrationBlueprintApiClient:
             title_elem = announcement.select_one(".long-username a")
             created = announcement.select_one(".created .small.gray")
             group_to = announcement.select_one("a[href^='/group/']")
-            date_elem = announcement.select_one("time")
+            date_elem = created
             likes = int(notnone(announcement.select_one(".s-like-sentence a")).get_text(strip=True).split()[0]) if announcement.select_one(".s-like-sentence a") else 0
             comments = []
             for comment in announcement.select("#s_comments .s_comments_level .discussion-card"):
@@ -209,23 +212,25 @@ class IntegrationBlueprintApiClient:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
         )
-        json = r.get("json", {})
-        html = json.get("html", "")
+        html = r.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
         events = []
         current_date = ""
-        for element in notnone(soup.find(class_="upcoming-list")).children:
-            e = notnone(element if isinstance(element, bs.Tag) else None)
-            if "date-header" in e.attrs["class"]:
-                current_date = notnone(next(iter(e.children))).get_text(strip=True)
-            elif "upcoming-event" in e.attrs["class"]:
+        upcoming_list = soup.find(class_="upcoming-list")
+        if not upcoming_list:
+            return []
+        for element in upcoming_list.find_all(recursive=False):
+            if "date-header" in element.attrs.get("class", []):
+                current_date = notnone(next(iter(element.children))).get_text(strip=True)
+            elif "upcoming-event" in element.attrs.get("class", []):
                 # 1768262399
-                start_ts = int(str(notnone(e.get("data-start"))))
+                start_ts = int(str(notnone(element.get("data-start"))))
                 eastern_tz = pytz.timezone("US/Eastern")
                 dt_with_tz = datetime.datetime.fromtimestamp(start_ts, tz=eastern_tz)
-                title = e.find(class_="event-title")
-                group = notnone(e.select_one(".realm-title-group")).get_text(strip=True) if e.select_one(".realm-title-group") else None
-                if title and time:
+                title = element.find(class_="event-title")
+                group_elem = element.select_one(".realm-title-group") or element.select_one(".realm-title-course-title .realm-main-titles")
+                group = group_elem.get_text(strip=True) if group_elem else None
+                if title:
                     events.append({
                         "title": title.get_text(strip=True),
                         "date": current_date,
@@ -243,16 +248,17 @@ class IntegrationBlueprintApiClient:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
         )
-        json = r.get("json", {})
-        html = json.get("html", "")
+        html = r.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
         assignments = []
-        for element in notnone(soup.find(class_="upcoming-list")).children:
-            e = notnone(element if isinstance(element, bs.Tag) else None)
-            if "upcoming-event" in e.attrs["class"]:
-                title = next(iter(notnone(e.find(class_="event-title")).children), None)
-                group = notnone(e.select_one(".realm-title-course-title .realm-main-titles")).get_text(strip=True) if e.select_one(".realm-title-course-title .realm-main-titles") else None
-                due = notnone(e.find_all(class_="readonly-title event-subtitle")[0]).get_text(strip=True) if e.find(class_="due-date") else None
+        upcoming_list = soup.find(class_="upcoming-list")
+        if not upcoming_list:
+            return []
+        for element in upcoming_list.find_all(recursive=False):
+            if "upcoming-event" in element.attrs.get("class", []):
+                title = next(iter(notnone(element.find(class_="event-title")).children), None)
+                group = notnone(element.select_one(".realm-title-course-title .realm-main-titles")).get_text(strip=True) if element.select_one(".realm-title-course-title .realm-main-titles") else None
+                due = notnone(element.find_all(class_="readonly-title event-subtitle")[0]).get_text(strip=True) if element.find(class_="due-date") else None
                 if notnone(due).startswith("Due "):
                     due = notnone(due)[4:]
                 if title:
@@ -273,16 +279,17 @@ class IntegrationBlueprintApiClient:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
         )
-        json = r.get("json", {})
-        html = json.get("html", "")
+        html = r.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
         assignments = []
-        for element in notnone(soup.find(class_="upcoming-list")).children:
-            e = notnone(element if isinstance(element, bs.Tag) else None)
-            if "overdue-event" in e.attrs["class"]:
-                title = next(iter(notnone(e.find(class_="event-title")).children), None)
-                group = notnone(e.select_one(".realm-title-course-title .realm-main-titles")).get_text(strip=True) if e.select_one(".realm-title-course-title .realm-main-titles") else None
-                due = notnone(e.find_all(class_="readonly-title event-subtitle")[0]).get_text(strip=True) if e.find(class_="due-date") else None
+        upcoming_list = soup.find(class_="upcoming-list")
+        if not upcoming_list:
+            return []
+        for element in upcoming_list.find_all(recursive=False):
+            if "upcoming-event" in element.attrs.get("class", []):
+                title = next(iter(notnone(element.find(class_="event-title")).children), None)
+                group = notnone(element.select_one(".realm-title-course-title .realm-main-titles")).get_text(strip=True) if element.select_one(".realm-title-course-title .realm-main-titles") else None
+                due = notnone(element.find_all(class_="readonly-title event-subtitle")[0]).get_text(strip=True) if element.find(class_="due-date") else None
                 if notnone(due).startswith("Due "):
                     due = notnone(due)[4:]
                 if title:
