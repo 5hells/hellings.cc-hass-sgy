@@ -25,4 +25,7 @@ class IntegrationBlueprintEntity(CoordinatorEntity[BlueprintDataUpdateCoordinato
                     coordinator.config_entry.entry_id,
                 ),
             },
+            name="Schoology",
+            manufacturer="Schoology",
+            model="API Integration",
         )

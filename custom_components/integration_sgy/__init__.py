@@ -78,13 +78,17 @@ async def async_setup_entry(
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     # Automatically add frontend card resources to Lovelace
-    if "lovelace" in hass.data and "resources" in hass.data["lovelace"]:
-        resources = hass.data["lovelace"]["resources"]
-        for card in FRONTEND_CARDS:
-            url = f"/frontend/{DOMAIN}/{card}/card.js"
-            existing = await resources.async_get_items()
-            if not any(res["url"] == url for res in existing):
-                await resources.async_create_item({"res_type": "module", "url": url})
+    if "lovelace" in hass.data and hasattr(hass.data["lovelace"], "resources"):
+        resources = hass.data["lovelace"].resources
+        if resources and hasattr(resources, "async_create_item"):
+            for card in FRONTEND_CARDS:
+                url = f"/frontend/{DOMAIN}/{card}/card.js"
+                try:
+                    existing = await resources.async_get_items()
+                    if not any(res.get("url") == url for res in existing):
+                        await resources.async_create_item({"res_type": "module", "url": url})
+                except Exception as e:
+                    LOGGER.warning("Failed to add Lovelace resource %s: %s", url, e)
 
     return True
 
