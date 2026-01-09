@@ -15,7 +15,7 @@ class SchoologyAssignmentsCard extends HTMLElement {
     const items = Array.isArray(stateObj.attributes.items) ? stateObj.attributes.items : [];
     const style = `
       <style>
-        .container { padding: 16px; }
+        .container { padding: 16px; max-height: 100px; overflow-y: auto; }
         .item { border-bottom: 1px solid var(--divider-color); padding: 12px 0; }
         .title { font-weight:600; }
         .meta { color: var(--secondary-text-color); font-size: 12px; }
@@ -34,7 +34,7 @@ class SchoologyAssignmentsCard extends HTMLElement {
       </ha-card>
     `;
   }
-  getCardSize() { return 2; }
+  getCardSize() { return (this.shadowRoot.children[0].getBoundingClientRect().height / 50) || 2; }
 
   getGridOptions() {
     return {
