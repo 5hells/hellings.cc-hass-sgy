@@ -146,7 +146,6 @@ class IntegrationBlueprintApiClient:
             method="get",
             url=f"https://{self._api_base}/home/feed?page=0",
             headers={
-                "Accept": "application/json, text/javascript, */*; q=0.01",
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             },
@@ -206,7 +205,6 @@ class IntegrationBlueprintApiClient:
             method="get",
             url=f"https://{self._api_base}/home/upcoming_ajax",
             headers={
-                "Accept": "application/json, text/javascript, */*; q=0.01",
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
@@ -241,7 +239,6 @@ class IntegrationBlueprintApiClient:
             method="get",
             url=f"https://{self._api_base}/home/upcoming_submissions_ajax",
             headers={
-                "Accept": "application/json, text/javascript, */*; q=0.01",
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
@@ -267,11 +264,11 @@ class IntegrationBlueprintApiClient:
         return assignments
 
     async def async_get_overdue_assignments(self) -> Any:
+        """Get overdue assignments from the API."""
         r = await self._api_wrapper(
             method="get",
             url=f"https://{self._api_base}/home/overdue_submissions_ajax",
             headers={
-                "Accept": "application/json, text/javascript, */*; q=0.01",
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
@@ -280,7 +277,7 @@ class IntegrationBlueprintApiClient:
         html = json.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
         assignments = []
-        for element in notnone(soup.find(class_="overdue-list")).children:
+        for element in notnone(soup.find(class_="upcoming-list")).children:
             e = notnone(element if isinstance(element, bs.Tag) else None)
             if "overdue-event" in e.attrs["class"]:
                 title = next(iter(notnone(e.find(class_="event-title")).children), None)
