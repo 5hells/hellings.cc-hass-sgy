@@ -20,7 +20,7 @@ class SchoologyOverdueCard extends HTMLElement {
     const style = `
       <style>
         .card-header { display: flex; align-items: center; gap: 8px; font-weight: 500; padding: 16px 16px 0 16px; }
-        .container { padding: 16px; height: 100px; max-height: 100px; overflow-y: auto; }
+        .container { padding: 16px; min-height: 100px; max-height: 100px; overflow-y: auto; }
         .item { border-bottom: 1px solid var(--divider-color); padding: 12px 0; }
         .title { font-weight:600; }
         .meta { color: var(--secondary-text-color); font-size: 12px; }

@@ -92,7 +92,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
       </ha-card>
     `;
   }
-  getCardSize() { return 200 / 50; }
+  getCardSize() { return 250 / 50; }
 
   getGridOptions() {
     return {

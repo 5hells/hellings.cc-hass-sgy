@@ -351,7 +351,7 @@ class IntegrationBlueprintApiClient:
                 if title:
                     events.append(
                         {
-                            "title": title.get_text(strip=True),
+                            "title": next(iter(title.children)).get_text(strip=True),
                             "date": current_date,
                             "time": dt_with_tz.strftime("%I:%M %p"),
                             "group": group,
