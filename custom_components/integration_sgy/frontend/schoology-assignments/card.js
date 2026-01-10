@@ -78,6 +78,5 @@ window.customCards.push({
   name: "Schoology Upcoming Assignments",
   description: "Display upcoming Schoology assignments",
   icon: "mdi:clipboard-text",
-  preview: true,
   documentationURL: "https://github.com/5hells/hellings.cc-hass-sgy",
 });

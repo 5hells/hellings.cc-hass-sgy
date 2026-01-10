@@ -129,6 +129,5 @@ window.customCards.push({
   name: "Schoology Announcements",
   description: "Display Schoology announcements with details",
   icon: "mdi:bullhorn",
-  preview: true,
   documentationURL: "https://github.com/5hells/hellings.cc-hass-sgy",
 });

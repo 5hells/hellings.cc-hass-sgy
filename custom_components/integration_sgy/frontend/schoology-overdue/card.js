@@ -78,6 +78,5 @@ window.customCards.push({
   name: "Schoology Overdue Assignments",
   description: "Display overdue Schoology assignments",
   icon: "mdi:alert-circle",
-  preview: true,
   documentationURL: "https://github.com/5hells/hellings.cc-hass-sgy",
 });
