@@ -270,7 +270,7 @@ class IntegrationBlueprintApiClient:
                         "profile_picture": pfp["src"] if pfp else None,
                         "group": group_to.get_text(strip=True) if group_to else None,
                         "created": created.get_text(strip=True) if created else None,
-                        "content": content.get_text(strip=True) if content else None,
+                        "content": content.encode_contents() if content else None,
                         "likes": likes,
                         "comments": comments,
                     }
@@ -315,6 +315,8 @@ class IntegrationBlueprintApiClient:
                         "date": current_date,
                         "time": dt_with_tz.strftime("%I:%M %p"),
                         "group": group,
+                        "link": notnone(element.select_one(".event-title a"))["href"]
+                                if element.select_one(".event-title a") else None,
                     })
         _LOGGER.debug("Retrieved %d upcoming events", len(events))
         return events
@@ -335,7 +337,6 @@ class IntegrationBlueprintApiClient:
         if not upcoming_list:
             return []
         for element in upcoming_list.find_all(recursive=False):
-            # <div class="upcoming-event upcoming-event-block course-event" data-start="1768280340" data-locked="" data-exception=""><h4><span role="tooltip" tabindex="0" class="infotip sCommonInfotip-processed" tipsygravity="e" aria-describedby="tooltip-content-696182bde1e9f" aria-label="British Lit Hon : Section 1 " original-title=""><span class="mini-icon grade-item-icon day-12 submission-event-icon"><span class="visually-hidden">Assignment.</span></span><span class="event-title"><a href="/assignment/8194845467" class="sExtlink-processed">Read Book 2 Chapter 9 (up to page 193)</a><span> <span class="readonly-title event-subtitle">Due Monday, January 12, 2026 at 11:59 pm</span><span class="readonly-title event-subtitle">British Lit Hon</span>&nbsp;<span class="infotip-content" id="tooltip-content-696182bde1e9f" role="tooltip"><div class="realm-title-course"><div class="realm-icon"></div><div class="realm-title-course-title"><div class="realm-main-titles">British Lit Hon : Section 1 </div></div></div></span></span></span></span></h4></div>
             if "upcoming-event" in element.attrs.get("class", []):
                 title = next(iter(notnone(element.find(class_="event-title")).children), None)
                 group = (
@@ -361,6 +362,8 @@ class IntegrationBlueprintApiClient:
                         "title": title.get_text(strip=True),
                         "group": group,
                         "due": due,
+                        "link": notnone(element.select_one(".event-title a"))["href"]
+                                if element.select_one(".event-title a") else None,
                     })
         _LOGGER.debug("Retrieved %d upcoming assignments", len(assignments))
         return assignments
@@ -406,7 +409,9 @@ class IntegrationBlueprintApiClient:
                     assignments.append({
                         "title": title.get_text(strip=True),
                         "group": group,
-                        "due": due,
+                        "due": due, 
+                        "link": notnone(element.select_one(".event-title a"))["href"]
+                                if element.select_one(".event-title a") else None,
                     })
         _LOGGER.debug("Retrieved %d overdue assignments", len(assignments))
         return assignments

@@ -37,10 +37,10 @@ class SchoologyAnnouncementsCard extends HTMLElement {
     const list = items.map((i) => {
       const pfp = i.profile_picture ? `<img class="pfp" src="${i.profile_picture}" alt="pfp" />` : '';
       const group = i.group ? `<span>${i.group}</span>` : '';
-      const likes = typeof i.likes === 'number' ? `<span> • ${i.likes} likes</span>` : '';
+      const likes = typeof i.likes === 'number' ? `<span> • <ha-icon icon="mdi:heart"></ha-icon> ${i.likes}</span>` : '';
       const created = i.created ? ` <div class="meta">${i.created}</div>` : '';
       const comments = Array.isArray(i.comments) && i.comments.length
-        ? `<div class="comments">${i.comments.map(c => `<div class="comment"><strong>${c.author}</strong>: ${c.content}${typeof c.likes === 'number' ? ` • ${c.likes} likes` : ''}</div>`).join('')}</div>`
+        ? `<div class="comments">${i.comments.map(c => `<div class="comment"><strong>${c.author}</strong>: ${c.content}${typeof c.likes === 'number' ? ` • <ha-icon icon="mdi:heart"></ha-icon> ${c.likes}` : ''}</div>`).join('')}</div>`
         : '';
       return `
         <div class="item">

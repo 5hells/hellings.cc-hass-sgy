@@ -23,7 +23,7 @@ class SchoologyUpcomingEventsCard extends HTMLElement {
     `;
     const list = items.map(i => `
       <div class="item">
-        <div class="title">${i.title || ''}</div>
+        <div class="title"><a href="${i.link || ''}" target="_blank">${i.title || ''}</a></div>
         <div class="meta">${i.group ? i.group + ' • ' : ''}${i.date || ''}${i.time ? ' • ' + i.time : ''}</div>
       </div>
     `).join('');

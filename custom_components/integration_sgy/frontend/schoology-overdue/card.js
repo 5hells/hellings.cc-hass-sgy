@@ -23,8 +23,8 @@ class SchoologyOverdueCard extends HTMLElement {
     `;
     const list = items.map(i => `
       <div class="item">
-        <div class="title">${i.title || ''}</div>
-        <div class="meta">${i.group ? i.group + ' • ' : ''}${i.due ? 'Due ' + i.due : ''}</div>
+        <div class="title"><a href="${i.link || ''}" target="_blank">${i.title || ''}</a></div>
+        <div class="meta">${i.group ? '<b>' + i.group.split(':')[0].trim() + '</b> ' + i.group.split(':')[1].trim() + ' • ' : ''}${i.due ? i.due : ''}</div>
       </div>
     `).join('');
     this.shadowRoot.innerHTML = `
