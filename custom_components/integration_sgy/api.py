@@ -295,6 +295,7 @@ class IntegrationBlueprintApiClient:
                         {
                             "author": author_elem.get_text(strip=True),
                             "content": content_elem.get_text(strip=True),
+                            "profile_picture": pfp_c["src"] if pfp_c else None,
                             "likes": comment_likes,
                         }
                     )

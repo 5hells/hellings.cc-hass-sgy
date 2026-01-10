@@ -27,6 +27,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
         .item { border-bottom: 1px solid var(--divider-color); padding: 12px 0; }
         .header { display:flex; align-items:center; gap:10px; }
         .pfp { width:32px; height:32px; border-radius:50%; object-fit:cover; }
+        .pfp-comment-inline { width:24px; height:24px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:6px; }
         .title { font-weight:600; }
         .meta { color: var(--secondary-text-color); font-size: 12px; }
         .comments { margin-top: 8px; padding-left: 8px; border-left: 2px solid var(--divider-color); }
@@ -40,7 +41,10 @@ class SchoologyAnnouncementsCard extends HTMLElement {
       const likes = typeof i.likes === 'number' ? `<span> • <ha-icon icon="mdi:heart"></ha-icon> ${i.likes}</span>` : '';
       const created = i.created ? ` <div class="meta">${i.created}</div>` : '';
       const comments = Array.isArray(i.comments) && i.comments.length
-        ? `<div class="comments">${i.comments.map(c => `<div class="comment"><strong>${c.author}</strong>: ${c.content}${typeof c.likes === 'number' ? ` • <ha-icon icon="mdi:heart"></ha-icon> ${c.likes}` : ''}</div>`).join('')}</div>`
+        ? `<div class="comments">${i.comments.map(c => `<div class="comment">
+            ${c.profile_picture ? `<img class="pfp-comment-inline" src="${c.profile_picture}" alt="pfp" />` : ''}
+            <strong>${c.author}</strong>: ${c.content}${typeof c.likes === 'number' ? ` • <ha-icon icon="mdi:heart"></ha-icon> ${c.likes}` : ''}</div>`).join('')}
+          </div>`
         : '';
       return `
         <div class="item">
