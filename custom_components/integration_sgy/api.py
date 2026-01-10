@@ -48,12 +48,16 @@ def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
         )
     response.raise_for_status()
 
+
 T = typing.TypeVar("T")
+
+
 def notnone(value: T | None) -> T:
     """Helper to assert that a value is not None."""
     if value is None:
         raise ValueError("Expected value to be not None")
     return value
+
 
 class IntegrationBlueprintApiClient:
     """Sample API Client."""
@@ -73,9 +77,11 @@ class IntegrationBlueprintApiClient:
         self._cookies: dict[str, str] = {}
         # Ensure session has proper User-Agent header
         if "User-Agent" not in self._session.headers:
-            self._session.headers.update({
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
-            })
+            self._session.headers.update(
+                {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
+                }
+            )
 
     async def async_login(self) -> dict:
         """
@@ -85,7 +91,7 @@ class IntegrationBlueprintApiClient:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
             }
-            
+
             async with async_timeout.timeout(10):
                 base_resp = await self._session.get(
                     f"https://{self._api_base}/",
@@ -98,21 +104,27 @@ class IntegrationBlueprintApiClient:
             _LOGGER.debug("Final URL after redirect: %s", final_url)
 
             # Check if we're already logged in by looking for home page indicators
-            if "home" in final_url.lower() or "dashboard" in final_url.lower() or final_url.endswith("/"):
+            if (
+                "home" in final_url.lower()
+                or "dashboard" in final_url.lower()
+                or final_url.endswith("/")
+            ):
                 _LOGGER.debug("Already logged in, checking for existing cookies")
                 # Check if we have valid cookies from previous session
                 if self._cookies:
                     _LOGGER.info("Using existing cookies for authenticated session")
                     return self._cookies
-                
+
                 # Try to get cookies from the session
                 cookies = {}
                 for cookie in self._session.cookie_jar:
                     cookies[cookie.key] = cookie.value
                     self._cookies[cookie.key] = cookie.value
-                
+
                 if cookies:
-                    _LOGGER.info("Found existing cookies in session, assuming logged in")
+                    _LOGGER.info(
+                        "Found existing cookies in session, assuming logged in"
+                    )
                     return cookies
 
             login_url = final_url
@@ -125,7 +137,7 @@ class IntegrationBlueprintApiClient:
 
             # Check if we're already logged in by looking for home page content
             soup = bs.BeautifulSoup(login_page, features="html.parser")
-            
+
             # Look for indicators that we're on the home page instead of login page
             if soup.find(id="s-user-login-form") is None:
                 # No login form found - check if we have home page indicators
@@ -133,18 +145,20 @@ class IntegrationBlueprintApiClient:
                     soup.find(class_="home-feed"),
                     soup.find(class_="upcoming-list"),
                     soup.find(id="sgy-home"),
-                    soup.find(class_="s-edge-feed")
+                    soup.find(class_="s-edge-feed"),
                 ]
-                
+
                 if any(indicator for indicator in home_indicators):
-                    _LOGGER.info("No login form found but detected home page content - assuming already logged in")
+                    _LOGGER.info(
+                        "No login form found but detected home page content - assuming already logged in"
+                    )
                     # Extract cookies from session
                     cookies = {}
                     for cookie in self._session.cookie_jar:
                         cookies[cookie.key] = cookie.value
                         self._cookies[cookie.key] = cookie.value
                     return cookies
-                
+
                 # If no login form and no home indicators, this might be an unexpected page
                 msg = f"Login form not found and not on home page. Expected form with id='s-user-login-form' or home page content"
                 raise IntegrationBlueprintApiClientError(msg)
@@ -185,7 +199,10 @@ class IntegrationBlueprintApiClient:
             _LOGGER.debug("Response status: %s", response.status)
             _LOGGER.debug("Cookies in jar: %s", len(list(self._session.cookie_jar)))
 
-            if "Invalid username or password" in body or "login" in str(response.url).lower():
+            if (
+                "Invalid username or password" in body
+                or "login" in str(response.url).lower()
+            ):
                 if "invalid" in body.lower():
                     msg = "Invalid credentials"
                     _LOGGER.warning("Login failed: %s", msg)
@@ -200,7 +217,9 @@ class IntegrationBlueprintApiClient:
                 cookies[cookie.key] = cookie.value
                 self._cookies[cookie.key] = cookie.value
 
-            _LOGGER.info("Successfully logged in to Schoology, obtained %d cookies", len(cookies))
+            _LOGGER.info(
+                "Successfully logged in to Schoology, obtained %d cookies", len(cookies)
+            )
             return cookies
         except TimeoutError as exception:
             msg = f"Timeout error during login - {exception}"
@@ -246,13 +265,31 @@ class IntegrationBlueprintApiClient:
             group_to = announcement.select_one("a[href^='/group/']")
             content = announcement.select_one(".update-body.s-rte")
             date_elem = created
-            likes = int(notnone(announcement.select_one(".s-like-sentence a")).get_text(strip=True).split()[0]) if announcement.select_one(".s-like-sentence a") else 0
+            likes = (
+                int(
+                    notnone(announcement.select_one(".s-like-sentence a"))
+                    .get_text(strip=True)
+                    .split()[0]
+                )
+                if announcement.select_one(".s-like-sentence a")
+                else 0
+            )
             comments = []
-            for comment in announcement.select("#s_comments .s_comments_level .discussion-card"):
+            for comment in announcement.select(
+                "#s_comments .s_comments_level .discussion-card"
+            ):
                 pfp_c = comment.select_one(".profile-picture a img")
                 author_elem = comment.select_one(".comment-author a")
                 content_elem = comment.select_one(".comment-body-wrapper")
-                comment_likes = int(notnone(comment.select_one(".s-like-comment-icon")).get_text(strip=True)) if comment.select_one(".s-like-comment-icon") else 0
+                comment_likes = (
+                    int(
+                        notnone(comment.select_one(".s-like-comment-icon")).get_text(
+                            strip=True
+                        )
+                    )
+                    if comment.select_one(".s-like-comment-icon")
+                    else 0
+                )
                 if author_elem and content_elem:
                     comments.append(
                         {
@@ -270,14 +307,15 @@ class IntegrationBlueprintApiClient:
                         "profile_picture": pfp["src"] if pfp else None,
                         "group": group_to.get_text(strip=True) if group_to else None,
                         "created": created.get_text(strip=True) if created else None,
-                        "content": content.encode_contents() if content else None,
+                        "content": content.encode_contents().decode("utf-8")
+                        if content
+                        else None,
                         "likes": likes,
                         "comments": comments,
                     }
                 )
         _LOGGER.debug("Retrieved %d announcements", len(announcements))
         return announcements
-
 
     async def async_get_upcoming_events(self) -> Any:
         """Get upcoming scheduled events from the API."""
@@ -287,7 +325,7 @@ class IntegrationBlueprintApiClient:
             headers={
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
-            }
+            },
         )
         html = r.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
@@ -307,20 +345,27 @@ class IntegrationBlueprintApiClient:
                 start_ts = int(str(notnone(element.get("data-start"))))
                 dt_with_tz = datetime.datetime.fromtimestamp(start_ts, tz=_EASTERN_TZ)
                 title = element.find(class_="event-title")
-                group_elem = element.select_one(".realm-title-group") or element.select_one(".realm-title-course-title .realm-main-titles")
+                group_elem = element.select_one(
+                    ".realm-title-group"
+                ) or element.select_one(".realm-title-course-title .realm-main-titles")
                 group = group_elem.get_text(strip=True) if group_elem else None
                 if title:
-                    events.append({
-                        "title": title.get_text(strip=True),
-                        "date": current_date,
-                        "time": dt_with_tz.strftime("%I:%M %p"),
-                        "group": group,
-                        "link": notnone(element.select_one(".event-title a"))["href"]
-                                if element.select_one(".event-title a") else None,
-                    })
+                    events.append(
+                        {
+                            "title": title.get_text(strip=True),
+                            "date": current_date,
+                            "time": dt_with_tz.strftime("%I:%M %p"),
+                            "group": group,
+                            "link": notnone(element.select_one(".event-title a"))[
+                                "href"
+                            ]
+                            if element.select_one(".event-title a")
+                            else None,
+                        }
+                    )
         _LOGGER.debug("Retrieved %d upcoming events", len(events))
         return events
-    
+
     async def async_get_upcoming_assignments(self) -> Any:
         r = await self._api_wrapper(
             method="get",
@@ -328,7 +373,7 @@ class IntegrationBlueprintApiClient:
             headers={
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
-            }
+            },
         )
         html = r.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
@@ -338,33 +383,51 @@ class IntegrationBlueprintApiClient:
             return []
         for element in upcoming_list.find_all(recursive=False):
             if "upcoming-event" in element.attrs.get("class", []):
-                title = next(iter(notnone(element.find(class_="event-title")).children), None)
+                title = next(
+                    iter(notnone(element.find(class_="event-title")).children), None
+                )
                 group = (
                     notnone(
-                        element.select_one(".realm-title-course-title .realm-main-titles")
+                        element.select_one(
+                            ".realm-title-course-title .realm-main-titles"
+                        )
                     ).get_text(strip=True)
-                    if element.select_one(".realm-title-course-title .realm-main-titles")
+                    if element.select_one(
+                        ".realm-title-course-title .realm-main-titles"
+                    )
                     else None
                 )
                 due = (
                     notnone(
-                        next(iter(
-                            list(notnone(element.find(class_="event-title")).find_all(recursive=False))[1].find_all(recursive=False)
-                        ))
-                    ).get_text(strip=True) or None
+                        next(
+                            iter(
+                                list(
+                                    notnone(
+                                        element.find(class_="event-title")
+                                    ).find_all(recursive=False)
+                                )[1].find_all(recursive=False)
+                            )
+                        )
+                    ).get_text(strip=True)
+                    or None
                 )
 
                 if due and notnone(due).startswith("Due "):
                     due = notnone(due)[4:]
 
                 if title:
-                    assignments.append({
-                        "title": title.get_text(strip=True),
-                        "group": group,
-                        "due": due,
-                        "link": notnone(element.select_one(".event-title a"))["href"]
-                                if element.select_one(".event-title a") else None,
-                    })
+                    assignments.append(
+                        {
+                            "title": title.get_text(strip=True),
+                            "group": group,
+                            "due": due,
+                            "link": notnone(element.select_one(".event-title a"))[
+                                "href"
+                            ]
+                            if element.select_one(".event-title a")
+                            else None,
+                        }
+                    )
         _LOGGER.debug("Retrieved %d upcoming assignments", len(assignments))
         return assignments
 
@@ -376,7 +439,7 @@ class IntegrationBlueprintApiClient:
             headers={
                 "Cookie": "; ".join(f"{k}={v}" for k, v in self._cookies.items()),
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
-            }
+            },
         )
         html = r.get("html", "")
         soup = bs.BeautifulSoup(html, features="html.parser")
@@ -386,33 +449,51 @@ class IntegrationBlueprintApiClient:
             return []
         for element in upcoming_list.find_all(recursive=False):
             if "upcoming-event" in element.attrs.get("class", []):
-                title = next(iter(notnone(element.find(class_="event-title")).children), None)
+                title = next(
+                    iter(notnone(element.find(class_="event-title")).children), None
+                )
                 group = (
                     notnone(
-                        element.select_one(".realm-title-course-title .realm-main-titles")
+                        element.select_one(
+                            ".realm-title-course-title .realm-main-titles"
+                        )
                     ).get_text(strip=True)
-                    if element.select_one(".realm-title-course-title .realm-main-titles")
+                    if element.select_one(
+                        ".realm-title-course-title .realm-main-titles"
+                    )
                     else None
                 )
                 due = (
                     notnone(
-                        next(iter(
-                            list(notnone(element.find(class_="event-title")).find_all(recursive=False))[1].find_all(recursive=False)
-                        ))
-                    ).get_text(strip=True) or None
+                        next(
+                            iter(
+                                list(
+                                    notnone(
+                                        element.find(class_="event-title")
+                                    ).find_all(recursive=False)
+                                )[1].find_all(recursive=False)
+                            )
+                        )
+                    ).get_text(strip=True)
+                    or None
                 )
 
                 if due and notnone(due).startswith("Due "):
                     due = notnone(due)[4:]
 
                 if title:
-                    assignments.append({
-                        "title": title.get_text(strip=True),
-                        "group": group,
-                        "due": due, 
-                        "link": notnone(element.select_one(".event-title a"))["href"]
-                                if element.select_one(".event-title a") else None,
-                    })
+                    assignments.append(
+                        {
+                            "title": title.get_text(strip=True),
+                            "group": group,
+                            "due": due,
+                            "link": notnone(element.select_one(".event-title a"))[
+                                "href"
+                            ]
+                            if element.select_one(".event-title a")
+                            else None,
+                        }
+                    )
         _LOGGER.debug("Retrieved %d overdue assignments", len(assignments))
         return assignments
 
@@ -427,7 +508,12 @@ class IntegrationBlueprintApiClient:
         # Ensure logged in before fetching endpoints
         await self.async_login()
         _LOGGER.debug("Login successful, fetching data endpoints")
-        announcements, upcoming_events, upcoming_assignments, overdue_assignments = await asyncio.gather(
+        (
+            announcements,
+            upcoming_events,
+            upcoming_assignments,
+            overdue_assignments,
+        ) = await asyncio.gather(
             self.async_get_announcements(),
             self.async_get_upcoming_events(),
             self.async_get_upcoming_assignments(),
@@ -439,8 +525,13 @@ class IntegrationBlueprintApiClient:
             "upcoming_assignments": upcoming_assignments,
             "overdue_assignments": overdue_assignments,
         }
-        _LOGGER.info("Successfully fetched all data: %d announcements, %d events, %d upcoming assignments, %d overdue assignments",
-                    len(announcements), len(upcoming_events), len(upcoming_assignments), len(overdue_assignments))
+        _LOGGER.info(
+            "Successfully fetched all data: %d announcements, %d events, %d upcoming assignments, %d overdue assignments",
+            len(announcements),
+            len(upcoming_events),
+            len(upcoming_assignments),
+            len(overdue_assignments),
+        )
         return result
 
     def set_cookies(self, cookies: dict) -> None:

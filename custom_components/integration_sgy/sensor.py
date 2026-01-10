@@ -53,14 +53,18 @@ async def async_setup_entry(
         for entity_description in ENTITY_DESCRIPTIONS
     )
 
+
 # @overriding_this_is_totally_okay("native_value")
 def overriding_this_is_totally_okay(property_fn):
     classx = property_fn.__self__.__class__
     wrapper = property(property_fn)
     setattr(classx, property_fn.__name__, wrapper)
+
     def wrapper_getter(self):
         return property_fn(self)
+
     return wrapper_getter
+
 
 class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
     """integration_blueprint Sensor class."""
@@ -79,7 +83,9 @@ class IntegrationBlueprintSensor(IntegrationBlueprintEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = entity_description
         # Ensure unique id per sensor type
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}-{entity_description.key}"
+        self._attr_unique_id = (
+            f"{coordinator.config_entry.entry_id}-{entity_description.key}"
+        )
 
     @property
     def native_value(self) -> int | None:

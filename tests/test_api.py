@@ -29,9 +29,11 @@ def session(event_loop):
     resolver = ThreadedResolver(loop=event_loop)
     connector = aiohttp.TCPConnector(resolver=resolver, loop=event_loop)
     sess = aiohttp.ClientSession(connector=connector, loop=event_loop)
-    sess.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
-    })
+    sess.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
+        }
+    )
     yield sess
     event_loop.run_until_complete(sess.close())
 
@@ -128,9 +130,8 @@ async def get_announcements(
             },
         )
         response.raise_for_status()
-    
-        data = await response.json()
 
+        data = await response.json()
 
     html = data.get("output", "")
     soup = bs.BeautifulSoup(html, features="html.parser")
@@ -224,7 +225,9 @@ async def get_upcoming_events(
             eastern_tz = pytz.timezone("US/Eastern")
             dt_with_tz = datetime.datetime.fromtimestamp(start_ts, tz=eastern_tz)
             title = element.find(class_="event-title")
-            group_elem = element.select_one(".realm-title-group") or element.select_one(".realm-title-course-title .realm-main-titles")
+            group_elem = element.select_one(".realm-title-group") or element.select_one(
+                ".realm-title-course-title .realm-main-titles"
+            )
             group = group_elem.get_text(strip=True) if group_elem else None
 
             if title:
@@ -354,8 +357,6 @@ async def get_overdue_assignments(
     return assignments
 
 
-
-
 @pytest.mark.asyncio
 async def test_login_success(session, credentials):
     """Test successful login with real Schoology credentials."""
@@ -478,9 +479,11 @@ async def test_get_overdue_assignments(session, credentials):
         if assignment["due"] is not None:
             assert isinstance(assignment["due"], str)
 
+
 import logging
 
 LOGGER = logging.getLogger(__name__)
+
 
 @pytest.mark.asyncio
 async def test_get_all_data(session, credentials, caplog):
