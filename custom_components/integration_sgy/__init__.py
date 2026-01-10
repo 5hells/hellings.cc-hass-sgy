@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
+    Platform.BUTTON,
 ]
 
 # List of frontend card directories

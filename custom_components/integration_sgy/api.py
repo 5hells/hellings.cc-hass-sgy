@@ -93,8 +93,29 @@ class IntegrationBlueprintApiClient:
                     headers=headers,
                 )
                 base_resp.raise_for_status()
-                login_url = str(base_resp.url)
+                final_url = str(base_resp.url)
 
+            _LOGGER.debug("Final URL after redirect: %s", final_url)
+
+            # Check if we're already logged in by looking for home page indicators
+            if "home" in final_url.lower() or "dashboard" in final_url.lower() or final_url.endswith("/"):
+                _LOGGER.debug("Already logged in, checking for existing cookies")
+                # Check if we have valid cookies from previous session
+                if self._cookies:
+                    _LOGGER.info("Using existing cookies for authenticated session")
+                    return self._cookies
+                
+                # Try to get cookies from the session
+                cookies = {}
+                for cookie in self._session.cookie_jar:
+                    cookies[cookie.key] = cookie.value
+                    self._cookies[cookie.key] = cookie.value
+                
+                if cookies:
+                    _LOGGER.info("Found existing cookies in session, assuming logged in")
+                    return cookies
+
+            login_url = final_url
             _LOGGER.debug("Login URL: %s", login_url)
 
             async with async_timeout.timeout(10):
@@ -102,13 +123,36 @@ class IntegrationBlueprintApiClient:
                 response.raise_for_status()
                 login_page = await response.text()
 
-            form = bs.BeautifulSoup(login_page, features="html.parser")
-            form_elem = form.find(id="s-user-login-form")
-            if not form_elem:
-                msg = f"Login form not found. Expected form with id='s-user-login-form'"
+            # Check if we're already logged in by looking for home page content
+            soup = bs.BeautifulSoup(login_page, features="html.parser")
+            
+            # Look for indicators that we're on the home page instead of login page
+            if soup.find(id="s-user-login-form") is None:
+                # No login form found - check if we have home page indicators
+                home_indicators = [
+                    soup.find(class_="home-feed"),
+                    soup.find(class_="upcoming-list"),
+                    soup.find(id="sgy-home"),
+                    soup.find(class_="s-edge-feed")
+                ]
+                
+                if any(indicator for indicator in home_indicators):
+                    _LOGGER.info("No login form found but detected home page content - assuming already logged in")
+                    # Extract cookies from session
+                    cookies = {}
+                    for cookie in self._session.cookie_jar:
+                        cookies[cookie.key] = cookie.value
+                        self._cookies[cookie.key] = cookie.value
+                    return cookies
+                
+                # If no login form and no home indicators, this might be an unexpected page
+                msg = f"Login form not found and not on home page. Expected form with id='s-user-login-form' or home page content"
                 raise IntegrationBlueprintApiClientError(msg)
 
+            form_elem = notnone(soup.find(id="s-user-login-form"))
             form_action = form_elem.get("action") or login_url
+            if type(form_action) is not str:
+                form_action = str(form_action)
             if not form_action.startswith("http"):
                 if form_action.startswith("/"):
                     form_action = f"https://{self._api_base}{form_action}"
@@ -122,7 +166,7 @@ class IntegrationBlueprintApiClient:
             for input_tag in form_elem.find_all("input"):
                 input_name = input_tag.get("name")
                 if input_name and input_name not in ["mail", "pass"]:
-                    post_data[input_name] = input_tag.get("value", "")
+                    post_data[str(input_name)] = str(input_tag.get("value", ""))
 
             async with async_timeout.timeout(10):
                 response = await self._session.post(
@@ -253,8 +297,11 @@ class IntegrationBlueprintApiClient:
         if not upcoming_list:
             return []
         for element in upcoming_list.find_all(recursive=False):
+            # <div id="upcoming_events" class="date-header  today sEventUpcoming-processed"><h4>Date</h4></div>
             if "date-header" in element.attrs.get("class", []):
-                current_date = notnone(next(iter(element.children))).get_text(strip=True)
+                date_header = element.find("h4")
+                if date_header:
+                    current_date = date_header.get_text(strip=True)
             elif "upcoming-event" in element.attrs.get("class", []):
                 # 1768262399
                 start_ts = int(str(notnone(element.get("data-start"))))
@@ -288,6 +335,7 @@ class IntegrationBlueprintApiClient:
         if not upcoming_list:
             return []
         for element in upcoming_list.find_all(recursive=False):
+            # <div class="upcoming-event upcoming-event-block course-event" data-start="1768280340" data-locked="" data-exception=""><h4><span role="tooltip" tabindex="0" class="infotip sCommonInfotip-processed" tipsygravity="e" aria-describedby="tooltip-content-696182bde1e9f" aria-label="British Lit Hon : Section 1 " original-title=""><span class="mini-icon grade-item-icon day-12 submission-event-icon"><span class="visually-hidden">Assignment.</span></span><span class="event-title"><a href="/assignment/8194845467" class="sExtlink-processed">Read Book 2 Chapter 9 (up to page 193)</a><span> <span class="readonly-title event-subtitle">Due Monday, January 12, 2026 at 11:59 pm</span><span class="readonly-title event-subtitle">British Lit Hon</span>&nbsp;<span class="infotip-content" id="tooltip-content-696182bde1e9f" role="tooltip"><div class="realm-title-course"><div class="realm-icon"></div><div class="realm-title-course-title"><div class="realm-main-titles">British Lit Hon : Section 1 </div></div></div></span></span></span></span></h4></div>
             if "upcoming-event" in element.attrs.get("class", []):
                 title = next(iter(notnone(element.find(class_="event-title")).children), None)
                 group = (
@@ -299,10 +347,10 @@ class IntegrationBlueprintApiClient:
                 )
                 due = (
                     notnone(
-                        element.find_all(class_="readonly-title event-subtitle")[0]
-                    ).get_text(strip=True)
-                    if element.find(class_="due-date")
-                    else None
+                        next(iter(
+                            list(notnone(element.find(class_="event-title")).find_all(recursive=False))[1].find_all(recursive=False)
+                        ))
+                    ).get_text(strip=True) or None
                 )
 
                 if due and notnone(due).startswith("Due "):
@@ -345,10 +393,10 @@ class IntegrationBlueprintApiClient:
                 )
                 due = (
                     notnone(
-                        element.find_all(class_="readonly-title event-subtitle")[0]
-                    ).get_text(strip=True)
-                    if element.find(class_="due-date")
-                    else None
+                        next(iter(
+                            list(notnone(element.find(class_="event-title")).find_all(recursive=False))[1].find_all(recursive=False)
+                        ))
+                    ).get_text(strip=True) or None
                 )
 
                 if due and notnone(due).startswith("Due "):
