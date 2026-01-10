@@ -355,9 +355,7 @@ class IntegrationBlueprintApiClient:
                             "date": current_date,
                             "time": dt_with_tz.strftime("%I:%M %p"),
                             "group": group,
-                            "link": notnone(element.select_one(".event-title a"))[
-                                "href"
-                            ]
+                            "link": f"https://{self._api_base}{notnone(element.select_one('.event-title a'))['href']}"
                             if element.select_one(".event-title a")
                             else None,
                         }
@@ -420,9 +418,7 @@ class IntegrationBlueprintApiClient:
                             "title": title.get_text(strip=True),
                             "group": group,
                             "due": due,
-                            "link": notnone(element.select_one(".event-title a"))[
-                                "href"
-                            ]
+                            "link": f"https://{self._api_base}{notnone(element.select_one('.event-title a'))['href']}"
                             if element.select_one(".event-title a")
                             else None,
                         }
@@ -486,9 +482,7 @@ class IntegrationBlueprintApiClient:
                             "title": title.get_text(strip=True),
                             "group": group,
                             "due": due,
-                            "link": notnone(element.select_one(".event-title a"))[
-                                "href"
-                            ]
+                            "link": f"https://{self._api_base}{notnone(element.select_one('.event-title a'))['href']}"
                             if element.select_one(".event-title a")
                             else None,
                         }

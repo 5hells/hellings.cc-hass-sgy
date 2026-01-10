@@ -47,7 +47,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
     const style = `
       <style>
         .card-header { display: flex; align-items: center; gap: 8px; font-weight: 500; padding: 16px 16px 0 16px; }
-        .container { padding: 16px; max-height: 200px; overflow-y: auto; }
+        .container { padding: 16px; min-height: 200px; max-height: 200px; overflow-y: auto; }
         .item { border-bottom: 1px solid var(--divider-color); padding: 12px 0; }
         .header { display:flex; align-items:center; gap:10px; }
         .pfp { width:32px; height:32px; border-radius:50%; object-fit:cover; }
@@ -92,7 +92,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
       </ha-card>
     `;
   }
-  getCardSize() { return (this.shadowRoot.children[0].getBoundingClientRect().height / 50) || 2; }
+  getCardSize() { return 200 / 50; }
 
   getGridOptions() {
     return {
