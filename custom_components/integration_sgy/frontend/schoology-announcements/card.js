@@ -1,7 +1,29 @@
+// Removes broken, garbage-looking formatting that my teachers so very love.
+function removeObsceneFormatting(input) {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = input;
+  const obsceneTags = ['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta'];
+  obsceneTags.forEach(tag => {
+    const elements = tempDiv.getElementsByTagName(tag);
+    while (elements[0]) {
+      elements[0].parentNode.removeChild(elements[0]);
+    }
+  });
+  const allElements = tempDiv.getElementsByTagName('*');
+  for (let i = 0; i < allElements.length; i++) {
+    allElements[i].style.color = '';
+    allElements[i].style.backgroundColor = '';
+  }
+  return tempDiv.innerHTML;
+}
+
 class SchoologyAnnouncementsCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) {
       throw new Error('Missing required property: entity');
+    }
+    if (!config.entity.startsWith('sensor.') || !config.entity.includes('schoology') || !config.entity.includes('announcements')) {
+      throw new Error('Entity must be a Schoology announcements sensor');
     }
     this._config = config;
     if (!this.shadowRoot) {
@@ -13,9 +35,10 @@ class SchoologyAnnouncementsCard extends HTMLElement {
     const entityId = this._config.entity;
     const stateObj = hass.states[entityId];
     const title = this._config.title || 'Announcements';
+    const icon = this._config.icon || 'mdi:bullhorn';
 
     if (!stateObj) {
-      this.shadowRoot.innerHTML = `<ha-card header="${title}"><div class="empty">Entity not found: ${entityId}</div></ha-card>`;
+      this.shadowRoot.innerHTML = `<ha-card><div class="card-header"><ha-icon icon="${icon}"></ha-icon> ${title}</div><div class="empty">Entity not found: ${entityId}</div></ha-card>`;
       return;
     }
 
@@ -23,6 +46,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
 
     const style = `
       <style>
+        .card-header { display: flex; align-items: center; gap: 8px; font-weight: 500; padding: 16px 16px 0 16px; }
         .container { padding: 16px; max-height: 200px; overflow-y: auto; }
         .item { border-bottom: 1px solid var(--divider-color); padding: 12px 0; }
         .header { display:flex; align-items:center; gap:10px; }
@@ -32,6 +56,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
         .meta { color: var(--secondary-text-color); font-size: 12px; }
         .comments { margin-top: 8px; padding-left: 8px; border-left: 2px solid var(--divider-color); }
         .comment { margin: 6px 0; }
+        a { color: inherit; text-decoration: none; }
       </style>
     `;
 
@@ -49,7 +74,7 @@ class SchoologyAnnouncementsCard extends HTMLElement {
       return `
         <div class="item">
           <div class="header">${pfp}<div class="title">${i.title || ''}</div></div>
-          <div>${i.content || ''}</div>
+          <div>${removeObsceneFormatting(i.content || '')}</div>
           <div class="meta">${group}${likes}</div>
           ${created}
           ${comments}
@@ -58,7 +83,8 @@ class SchoologyAnnouncementsCard extends HTMLElement {
     }).join('');
 
     this.shadowRoot.innerHTML = `
-      <ha-card header="${title}">
+      <ha-card>
+        <div class="card-header"><ha-icon icon="${icon}"></ha-icon> ${title}</div>
         ${style}
         <div class="container">
           ${items.length ? list : '<div class="empty">No announcements</div>'}
@@ -79,15 +105,17 @@ class SchoologyAnnouncementsCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      entity: "sensor.schoology_announcements"
+      entity: "sensor.schoology_announcements",
+      icon: "mdi:bullhorn"
     };
   }
 
   static getConfigForm() {
     return {
       schema: [
-        { name: "entity", required: true, selector: { entity: {} } },
+        { name: "entity", required: true, selector: { entity: { domain: "sensor" } } },
         { name: "title", selector: { text: {} } },
+        { name: "icon", selector: { icon: {} } },
       ],
     };
   }

@@ -1,6 +1,9 @@
 class SchoologyUpcomingEventsCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) throw new Error('Missing required property: entity');
+    if (!config.entity.startsWith('sensor.') || !config.entity.includes('schoology') || !config.entity.includes('upcoming_events')) {
+      throw new Error('Entity must be a Schoology upcoming events sensor');
+    }
     this._config = config;
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
   }
@@ -8,17 +11,20 @@ class SchoologyUpcomingEventsCard extends HTMLElement {
     const entityId = this._config.entity;
     const stateObj = hass.states[entityId];
     const title = this._config.title || 'Upcoming Events';
+    const icon = this._config.icon || 'mdi:calendar';
     if (!stateObj) {
-      this.shadowRoot.innerHTML = `<ha-card header="${title}"><div class="empty">Entity not found: ${entityId}</div></ha-card>`;
+      this.shadowRoot.innerHTML = `<ha-card><div class="card-header"><ha-icon icon="${icon}"></ha-icon> ${title}</div><div class="empty">Entity not found: ${entityId}</div></ha-card>`;
       return;
     }
     const items = Array.isArray(stateObj.attributes.items) ? stateObj.attributes.items : [];
     const style = `
       <style>
+        .card-header { display: flex; align-items: center; gap: 8px; font-weight: 500; padding: 16px 16px 0 16px; }
         .container { padding: 16px; max-height: 100px; overflow-y: auto; }
         .item { border-bottom: 1px solid var(--divider-color); padding: 12px 0; }
         .title { font-weight:600; }
         .meta { color: var(--secondary-text-color); font-size: 12px; }
+        a { color: inherit; text-decoration: none; }
       </style>
     `;
     const list = items.map(i => `
@@ -28,7 +34,8 @@ class SchoologyUpcomingEventsCard extends HTMLElement {
       </div>
     `).join('');
     this.shadowRoot.innerHTML = `
-      <ha-card header="${title}">
+      <ha-card>
+        <div class="card-header"><ha-icon icon="${icon}"></ha-icon> ${title}</div>
         ${style}
         <div class="container">${items.length ? list : '<div class="empty">No upcoming events</div>'}</div>
       </ha-card>
@@ -47,15 +54,17 @@ class SchoologyUpcomingEventsCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      entity: "sensor.schoology_upcoming_events"
+      entity: "sensor.schoology_upcoming_events",
+      icon: "mdi:calendar"
     };
   }
 
   static getConfigForm() {
     return {
       schema: [
-        { name: "entity", required: true, selector: { entity: {} } },
+        { name: "entity", required: true, selector: { entity: { domain: "sensor" } } },
         { name: "title", selector: { text: {} } },
+        { name: "icon", selector: { icon: {} } },
       ],
     };
   }
