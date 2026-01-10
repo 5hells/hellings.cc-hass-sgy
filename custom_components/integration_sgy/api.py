@@ -307,9 +307,7 @@ class IntegrationBlueprintApiClient:
                         "profile_picture": pfp["src"] if pfp else None,
                         "group": group_to.get_text(strip=True) if group_to else None,
                         "created": created.get_text(strip=True) if created else None,
-                        "content": content.encode_contents().decode("utf-8")
-                        if content
-                        else None,
+                        "content": notnone(content).decode_contents().strip(),
                         "likes": likes,
                         "comments": comments,
                     }
